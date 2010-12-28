@@ -37,6 +37,6 @@ agent = Mechanize.new
 member_sel = SERVICES[service][:member_sel]
 tw_id_sel = SERVICES[service][:tw_id_sel]
 evt_page = agent.get evt_uri
-evt_page.search( member_sel ).map{|link|
-  p link.click.at( tw_id_sel )
+evt_page.search( member_sel ).map{|a|
+  p agent.get(a[HREF]).at( tw_id_sel ).inner_text
 }
