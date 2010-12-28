@@ -3,9 +3,8 @@
 $VERBOSE = true
 
 require 'optparse'
-require 'open-uri'
 require 'rubygems'
-require 'nokogiri'
+require 'mechanize'
 
 opt = OptionParser.new( "#{$PROGRAM_NAME}: [options...] [http://atnd.org/events/]EVENT_ID")
 opts = {}
@@ -34,9 +33,9 @@ service = opts[:evt_service]
 opts[:list_name] ||= service.to_s + evt_id
 
 HREF = 'href'
+agent = Mechanize.new
 member_sel = SERVICES[service][:member_sel]
-open( evt_uri ){|evt_page_in|
-  Nokogiri::HTML( evt_page_in ).search( member_sel ).map{|elm|
-    p elm[ HREF ]
-  }
+evt_page = agent.get evt_uri
+evt_page.search( member_sel ).map{|elm|
+  p elm[ HREF ]
 }
