@@ -1,0 +1,40 @@
+#!/usr/bin/env ruby
+# vim: set fileencoding=utf-8 :
+$VERBOSE = true
+
+require 'optparse'
+require 'open-uri'
+require 'rubygems'
+require 'nokogiri'
+
+opt = OptionParser.new( "#{$PROGRAM_NAME}: [options...] [http://atnd.org/events/]EVENT_ID")
+opts = {}
+opts[:list_name] = nil
+opts[:evt_service] = :atnd
+begin
+  opt.on('-l', '--list-name=LIST_NAME', 'The name of twitter list to create or to add.'){|v| opts[:list_name] = v }
+  opt.on('-a', '--atend', 'The event page is of atnd.org'){ opts[:evt_service] = :atnd }
+  opt.order!(ARGV)
+rescue OptionParser::ParseError
+  fail "#$PROGRAM_NAME: unrecognized option found. See '#$PROGRAM_NAME --help' for the available options."
+end
+URL_PREFIX = {
+  :atnd => 'atnd.org/events/'
+}
+
+MEMBER_SEL = {
+  :atnd => '.member_name>li>a'
+}
+
+evt_uri = ARGV[0]
+evt_id = ARGV[0]
+
+opts[:list_name] ||= opts[:evt_service].to_s + evt_id
+
+HREF = 'href'
+sel = MEMBER_SEL[ opts[:evt_service] ]
+open( evt_uri ){|evt_page_in|
+  Nokogiri::HTML( evt_page_in ).css( sel ).each{|elm|
+    puts elm[ HREF ]
+  }
+}
