@@ -34,7 +34,7 @@ opts[:list_name] ||= opts[:evt_service].to_s + evt_id
 HREF = 'href'
 sel = MEMBER_SEL[ opts[:evt_service] ]
 open( evt_uri ){|evt_page_in|
-  Nokogiri::HTML( evt_page_in ).css( sel ).each{|elm|
-    puts elm[ HREF ]
+  Nokogiri::HTML( evt_page_in ).search( sel ).map{|elm|
+    p elm[ HREF ]
   }
 }
