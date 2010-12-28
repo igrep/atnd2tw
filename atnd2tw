@@ -53,3 +53,5 @@ oa = File.open('ctoken.txt'){|ct_f|
 tw = Twitter::Base.new oa #old version of twitter.rb
 
 tw_ids.each{|id| tw.list_add_member 'igrep', opts[:list_name], id }
+
+puts "Added to '#{opts[:list_name]}':", tw_ids.map{|id| '@' + id }.join ' '
