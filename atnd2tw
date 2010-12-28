@@ -5,6 +5,7 @@ $VERBOSE = true
 require 'optparse'
 require 'rubygems'
 require 'mechanize'
+require 'twitter'
 
 opt = OptionParser.new( "#{$PROGRAM_NAME}: [options...] [http://atnd.org/events/]EVENT_ID")
 opts = {}
@@ -13,6 +14,7 @@ opts[:evt_service] = :atnd
 begin
   opt.on('-l', '--list-name=LIST_NAME', 'The name of twitter list to create or to add.'){|v| opts[:list_name] = v }
   opt.on('-a', '--atend', 'The event page is of atnd.org'){ opts[:evt_service] = :atnd }
+  opt.on('-t', '--access-token TOKEN_FILE', 'access token file.'){|v| opts[:atoken_path] = v }
   opt.order!(ARGV)
 rescue OptionParser::ParseError
   fail "#$PROGRAM_NAME: unrecognized option found. See '#$PROGRAM_NAME --help' for the available options."
@@ -37,6 +39,17 @@ agent = Mechanize.new
 member_sel = SERVICES[service][:member_sel]
 tw_id_sel = SERVICES[service][:tw_id_sel]
 evt_page = agent.get evt_uri
-evt_page.search( member_sel ).map{|a|
-  p agent.get(a[HREF]).at( tw_id_sel ).inner_text
+tw_ids = evt_page.search( member_sel ).map{|a|
+  agent.get(a[HREF]).at( tw_id_sel ).inner_text
 }
+
+oa = File.open('ctoken.txt'){|ct_f|
+  ck, cs = ct_f.readlines
+  oauth = Twitter::OAuth.new ck.chomp, cs.chomp
+  at, as = File.open( opts[:atoken_path] ).readlines
+  oauth.authorize_from_access at.chomp, as.chomp
+  oauth
+}
+tw = Twitter::Base.new oa #old version of twitter.rb
+
+tw_ids.each{|id| tw.list_add_member 'igrep', opts[:list_name], id }
