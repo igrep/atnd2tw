@@ -18,23 +18,25 @@ begin
 rescue OptionParser::ParseError
   fail "#$PROGRAM_NAME: unrecognized option found. See '#$PROGRAM_NAME --help' for the available options."
 end
-URL_PREFIX = {
-  :atnd => 'atnd.org/events/'
+SERVICES = {
+  :atnd => {
+    :host => 'atnd.org',
+    :member_sel => '.member_name>li>a',
+    :tw_id_sel => "//div[@id='user_info']/dl/dt[.='Twitter ID']/../dd/a",
+  }
 }
 
-MEMBER_SEL = {
-  :atnd => '.member_name>li>a'
-}
 
 evt_uri = ARGV[0]
 evt_id = ARGV[0]
 
-opts[:list_name] ||= opts[:evt_service].to_s + evt_id
+service = opts[:evt_service]
+opts[:list_name] ||= service.to_s + evt_id
 
 HREF = 'href'
-sel = MEMBER_SEL[ opts[:evt_service] ]
+member_sel = SERVICES[service][:member_sel]
 open( evt_uri ){|evt_page_in|
-  Nokogiri::HTML( evt_page_in ).search( sel ).map{|elm|
+  Nokogiri::HTML( evt_page_in ).search( member_sel ).map{|elm|
     p elm[ HREF ]
   }
 }
