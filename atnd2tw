@@ -8,13 +8,18 @@ require 'mechanize'
 require 'twitter'
 
 opt = OptionParser.new( "#{$PROGRAM_NAME}: [options...] [http://atnd.org/events/]EVENT_ID")
-opts = {}
-opts[:list_name] = nil
-opts[:evt_service] = :atnd
+opts = { #default options
+  :list_name => nil,
+  :evt_service => :atnd,
+  :token_path => 'token.txt',
+  :follow => false
+}
 begin
-  opt.on('-l', '--list-name=LIST_NAME', 'The name of twitter list to create or to add.'){|v| opts[:list_name] = v }
-  opt.on('-a', '--atend', 'The event page is of atnd.org'){ opts[:evt_service] = :atnd }
-  opt.on('-t', '--access-token TOKEN_FILE', 'access token file.'){|v| opts[:atoken_path] = v }
+  opt.on('-l', '--list-name=LIST_NAME',
+         "The name of twitter list to create or to add. When not specified, don't make the list."){|v| opts[:list_name] = v }
+  opt.on('-f', '--[no-]follow', 'Follow the listed people. Default: FALSE.'){|v| opts[:follow] = v }
+  opt.on('-e', '--event-service=SERVICE_NAME', 'The event page is of SERVICE_NAME'){|v| opts[:evt_service] = v.to_sym }
+  opt.on('-t', '--token=TOKEN_FILE', 'token file.'){|v| opts[:token_path] = v }
   opt.order!(ARGV)
 rescue OptionParser::ParseError
   fail "#$PROGRAM_NAME: unrecognized option found. See '#$PROGRAM_NAME --help' for the available options."
@@ -27,31 +32,30 @@ SERVICES = {
   }
 }
 
-
-evt_uri = ARGV[0]
-evt_id = ARGV[0]
-
-service = opts[:evt_service]
-opts[:list_name] ||= service.to_s + evt_id
-
 HREF = 'href'
 agent = Mechanize.new
+service = opts[:evt_service]
 member_sel = SERVICES[service][:member_sel]
 tw_id_sel = SERVICES[service][:tw_id_sel]
-evt_page = agent.get evt_uri
-tw_ids = evt_page.search( member_sel ).map{|a|
+
+tw_ids = agent.get( evt_uri ).search( member_sel ).map{|a|
   agent.get(a[HREF]).at( tw_id_sel ).inner_text
 }
 
-oa = File.open('ctoken.txt'){|ct_f|
-  ck, cs = ct_f.readlines
-  oauth = Twitter::OAuth.new ck.chomp, cs.chomp
-  at, as = File.open( opts[:atoken_path] ).readlines
-  oauth.authorize_from_access at.chomp, as.chomp
-  oauth
-}
-tw = Twitter::Base.new oa #old version of twitter.rb
+ct_f = File.open(opts[:token_path])
+ck, cs, at, as, user_id = ct_f.readlines
+oa = Twitter::OAuth.new ck.chomp, cs.chomp
+oa.authorize_from_access at.chomp, as.chomp
 
-tw_ids.each{|id| tw.list_add_member 'igrep', opts[:list_name], id }
+tw = Twitter::Base.new oa #old version of twitter.rb. deprecated since ver 1.0
 
-puts "Added to '#{opts[:list_name]}':", tw_ids.map{|id| '@' + id }.join( ' ' )
+at_ids = tw_ids.map{|id| '@' + id }.join( ' ' )
+if opts[:list_name]
+  tw_ids.each{|id| tw.list_add_member user_id.chomp, opts[:list_name], id }
+  puts "Added to '#{opts[:list_name]}':", at_ids
+end
+
+if opts[:follow]
+  tw_ids.each{|id| tw.friendship_create id }
+  puts "Followed people: ", at_ids
+end
